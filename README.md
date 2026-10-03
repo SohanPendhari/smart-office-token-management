@@ -3,7 +3,7 @@
 A web-based queue and token management system that allows visitors to select an office department, generate a token online, track their queue position, and get called by staff.
 
 ## 🖥️ Home Page
-<img src="./screenshots/home_pagr.png" width="500"/>
+<img src="./screenshots/home_pagr.png" width="1000"/>
 
 ## 🎬 Demo Video
 
