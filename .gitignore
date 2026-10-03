@@ -1,0 +1,16 @@
+# secrets / local config
+.env
+*.local
+
+# Go
+backend/bin/
+backend/*.exe
+backend/*.test
+backend/vendor/
+
+# editors / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
