@@ -3,8 +3,7 @@
 A web-based queue and token management system that allows visitors to select an office department, generate a token online, track their queue position, and get called by staff.
 
 ## 🖥️ Home Page
-
-![Smart Office Home Page](docs/home-page.png)
+<img src="./screenshots/home_pagr.png" width="500"/>
 
 ## 🎬 Demo Video
 
