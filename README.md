@@ -1,218 +1,198 @@
-<div align="center">
-🏢 Smart Office Queue & Token Management
-Pick a department → get a token like `IT-021` → watch your position update live → get called.
-![Flutter Web](https://img.shields.io/badge/Frontend-Flutter%20Web-02569B?logo=flutter&logoColor=white)
-![Go](https://img.shields.io/badge/Backend-Go%201.22-00ADD8?logo=go&logoColor=white)
-![PostgreSQL](https://img.shields.io/badge/Database-PostgreSQL-4169E1?logo=postgresql&logoColor=white)
-![JWT](https://img.shields.io/badge/Auth-JWT%20%2B%20bcrypt-000000?logo=jsonwebtokens&logoColor=white)
-![Riverpod](https://img.shields.io/badge/State-Riverpod-0553B1)
-![Watch the demo](https://drive.google.com/file/d/1Ikq_sIZUcE8Rdu5-ahu-2Jz85Crbkwfk/view?usp=sharing)
-</div>
----
-🎬 Demo video
-<div align="center">
-![Smart Office Queue demo - click to watch]()
-▶ Click to watch the full walkthrough on Google Drive
-</div>
----
-📖 Table of contents
-Overview · Features · Tech stack · Architecture · Quick start · Default logins · Queue rules · API · Project structure · Testing · Limitations
-🧭 Overview
-Visitors choose an office department (IT Support, HR, Accounts, Administration), receive a backend-generated token, and see their queue position and estimated waiting time update live. Staff and admins run the queue from a desktop-friendly console.
-> \\\*\\\*The golden rule:\\\*\\\* Flutter is only the presentation layer. \\\*\\\*Go owns every business rule\\\*\\\* (token numbers, priority, no-show, transfer, pause, concurrency) and \\\*\\\*PostgreSQL is the source of truth\\\*\\\*. The browser never decides which token is next.
-Role	What they can do
-🙋 Visitor (no account)	Choose a department, generate a token, see position + estimated wait + live queue, cancel a waiting token
-🧑‍💼 Staff (one department)	Sign in, view the dashboard, call next, complete, no-show, transfer, set priority, pause / resume their department
-🛡️ Admin	Everything staff can do, in every department
+Smart Office Queue & Token Management System
+A web-based queue and token management system that allows visitors to select an office department, generate a token online, track their queue position, and get called by staff.
+🖥️ Home Page
+ 
+🎬 Demo Video
+▶️ Watch the full project demo on Google Drive
 ✨ Features
-🎟️ Backend-generated, unique token numbers per department, restarting every day (`IT-001`, `IT-002`, …)
-⭐ Priority queue that never interrupts the token being served
-🚫 No-show rules: first → end of the queue, second → cancelled
-🔀 Transfers between departments with full history
-⏸️ Pause / resume a department (existing tokens continue, new ones are blocked)
-⏱️ Live position and estimated wait (REST polling every 5 s)
-🔒 Concurrency-safe "Call next" using `SELECT … FOR UPDATE SKIP LOCKED`
-🔐 JWT authentication, bcrypt password hashes, role + department authorization
-📊 Dashboard: waiting, serving, completed, no-shows, average waiting / service time, per-department counts
-🧾 Audit trail (`token\\\_events`) and statistics tables
-🖥️ Responsive UI: landing page + top navigation for visitors, sidebar console for staff, works from phone to wide monitor
-⚙️ API URL switchable inside the app (this PC, another device on the Wi-Fi, or Android emulator)
-🧰 Tech stack
+👤 Visitor
+- Choose a department
+- Generate a backend-created token such as IT-001
+- View queue position and people ahead
+- View estimated waiting time
+- Track live queue updates
+- Cancel a waiting token
+- Transfer/queue handling is managed by the backend
+👨‍💼 Staff
+- Secure staff login
+- View department queue
+- Call the next token
+- Complete a service
+- Mark a token as no-show
+- Transfer tokens to another department
+- Set token priority
+- Pause and resume a department
+- View queue and dashboard information
+🛡️ Admin
+- Manage and monitor all departments
+- Access staff-level queue operations across departments
+- View dashboard statistics
+🏢 Departments
+The system includes four departments:
+- IT Support
+- HR
+- Accounts
+- Administration
+🔄 How It Works
+Visitor
+   ↓
+Select Department
+   ↓
+Generate Token
+   ↓
+Track Queue Position
+   ↓
+Staff Calls Token
+   ↓
+Service
+   ↓
+Complete / No-show / Transfer
+🧰 Technology Stack
 Layer	Technology
-Frontend	Flutter Web, Riverpod 2, `http`, `shared\\\_preferences`
-Backend	Go 1.22+, standard-library `net/http`, `database/sql` + `lib/pq`, `golang-jwt/jwt/v5`, `bcrypt`
+Frontend	Flutter Web
+State Management	Riverpod 2
+Backend	Go 1.22+
+API	REST / JSON
 Database	PostgreSQL 14+
+Authentication	JWT + bcrypt
+HTTP	Go net/http
+Database Driver	database/sql + lib/pq
+
+
 🏗️ Architecture
-```mermaid
-flowchart LR
-    A\\\["🖥️ Flutter Web app<br/>screens · Riverpod"] -- "REST / JSON" --> B\\\["🟦 Go backend<br/>handlers → services → repositories"]
-    B -- "SQL / transactions" --> C\\\[("🐘 PostgreSQL")]
-```
-Backend layers: `handlers` (HTTP only) → `services` (all rules, own the transactions) → `repositories` (all SQL). `middleware` provides JWT auth, logging, CORS and panic recovery.
-🚀 Quick start
+Flutter Web
+    │
+    │ REST / JSON
+    ▼
+Go Backend
+    │
+    │ SQL / Transactions
+    ▼
+PostgreSQL
+The backend owns queue business rules such as token generation, priority, no-show handling, transfers, pause/resume, and concurrency. PostgreSQL is the source of truth.
+📌 Queue Rules
+- Token numbers are generated per department and reset daily.
+- Priority re-orders waiting tokens but does not interrupt a token already being served.
+- First no-show returns the token to the end of the queue.
+- Second no-show cancels the token.
+- Tokens can be transferred between departments.
+- Pausing a department blocks new tokens while existing service operations can continue.
+- Call next uses database locking to prevent two staff members from receiving the same token.
+- A staff member cannot call another token while still serving one.
+- A mobile number cannot hold two active tokens in the same department.
+- Queue position and estimated waiting time are updated using live queue data.
+🚀 Project Setup
 Prerequisites
-Go 1.22+ (needed for `"PATCH /api/departments/{id}/pause"` style routes)
-PostgreSQL 14+ with `psql` on your PATH
-Flutter SDK 3.19+ and Google Chrome (`flutter doctor` should list Chrome)
+- Go 1.22+
+- PostgreSQL 14+
+- Flutter SDK 3.19+
+- Google Chrome
 1. Database
-```bat
 cd database
-setup.bat            :: Windows  (optional args: setup.bat <pg\\\_user> <db\\\_name>)
-```
-```bash
-cd database \\\&\\\& ./setup.sh     # macOS / Linux / Git Bash
-```
-<details><summary>Manual equivalent</summary>
-```bash
-psql -U postgres -c "CREATE DATABASE smart\\\_office"
-psql -U postgres -d smart\\\_office -f database/schema.sql
-psql -U postgres -d smart\\\_office -f database/seed.sql
-```
-Optional (office time instead of UTC for the daily token reset): `ALTER DATABASE smart\\\_office SET timezone TO 'Asia/Kolkata';`
-</details>
+setup.bat
+Manual database setup:
+psql -U postgres -c "CREATE DATABASE smart_office"
+psql -U postgres -d smart_office -f database/schema.sql
+psql -U postgres -d smart_office -f database/seed.sql
 2. Backend
-```bash
 cd backend
-cp .env.example .env        # Windows: copy .env.example .env
-# edit .env -> put your Postgres password in DATABASE\\\_URL and set JWT\\\_SECRET
-go mod tidy                 # first time only (downloads deps, creates go.sum)
-go run ./cmd/server         # http://localhost:8080
-```
-Check it: http://localhost:8080/api/health → `{"status":"ok"}`
-`.env` values:
-```
-PORT=8080
-DATABASE\\\_URL=postgres://postgres:YOUR\\\_PASSWORD@localhost:5432/smart\\\_office?sslmode=disable
-JWT\\\_SECRET=use-a-long-random-string
-JWT\\\_TTL\\\_HOURS=12
-```
-3. Frontend (Flutter Web)
-```powershell
+copy .env.example .env
+go mod tidy
+go run ./cmd/server
+Backend:
+http://localhost:8080
+Health check:
+http://localhost:8080/api/health
+3. Frontend
 cd frontend
-powershell -ExecutionPolicy Bypass -File .\\\\setup\\\_web.ps1     # once (macOS/Linux: ./setup\\\_web.sh)
-flutter run -d chrome --web-port 3000                        # http://localhost:3000
-```
-4. Point the app at the backend
-Where you open the app	API URL
-Chrome on the same PC as the backend	`http://localhost:8080` (default)
-Browser on another PC / phone (same Wi-Fi)	`http://<backend-PC-IP>:8080` (allow port 8080 in the firewall)
-Android emulator (optional)	`http://10.0.2.2:8080`
-Change it in the app: top bar ⚙️ → Server settings → Test connection → Save. Or at build time: `flutter run -d chrome --dart-define=API\\\_BASE\\\_URL=http://192.168.1.10:8080`.
-To open the app from another device: `flutter run -d web-server --web-hostname 0.0.0.0 --web-port 3000`.
-Production build: `flutter build web` → `frontend/build/web`.
-🔑 Default logins
+powershell -ExecutionPolicy Bypass -File .\setup_web.ps1
+flutter run -d chrome --web-port 3000
+Frontend:
+http://localhost:3000
+🔐 Default Demo Logins
 Role	Email	Password
-Admin (all departments)	`admin@smartoffice.com`	`Admin@123`
-IT staff	`it.staff@smartoffice.com`	`Staff@123`
-HR staff	`hr.staff@smartoffice.com`	`Staff@123`
-Accounts staff	`accounts.staff@smartoffice.com`	`Staff@123`
-Administration staff	`admin.staff@smartoffice.com`	`Staff@123`
-> ⚠️ Demo credentials. Change them and `JWT\\\_SECRET` before any real deployment. Create a hash for a new user with `go run ./cmd/hashpw "MyPassword"`.
-🧠 Queue rules
-Call-next order
-```sql
-SELECT id FROM tokens
-WHERE department\\\_id = $1 AND status = 'WAITING'
-ORDER BY priority DESC, priority\\\_level DESC, sequence\\\_number ASC
-LIMIT 1
-FOR UPDATE SKIP LOCKED;
-```
-Priority + oldest → priority + next → normal + oldest → normal + next.
-```mermaid
-stateDiagram-v2
-    \\\[\\\*] --> WAITING: generate token
-    WAITING --> SERVING: staff "Call next"
-    WAITING --> CANCELLED: visitor cancels
-    SERVING --> COMPLETED: complete
-    SERVING --> WAITING: 1st no-show (end of queue)
-    SERVING --> CANCELLED: 2nd no-show
-    WAITING --> WAITING: transfer (other department, end of queue)
-```
-Rule	Behaviour
-Priority	Re-orders only the waiting list. It never interrupts a token being served.
-No-show #1	`WAITING`, `no\\\_show\\\_count = 1`, new sequence number → end of the queue (priority flag dropped)
-No-show #2	`CANCELLED`. Threshold = `queue\\\_settings.max\\\_no\\\_shows` (default 2)
-Transfer	Closes the service session, logs a `token\\\_transfers` row, moves the token to the target department as `WAITING` at the end of that queue. The token keeps its number.
-Pause	Blocks new tokens (409). Existing tokens, calling and completing keep working.
-Concurrency	Call next runs in a transaction; two staff pressing it at the same instant lock different rows and never get the same token.
-Unique numbers	A row-locking counter per department/day + `UNIQUE (token\\\_number, created\\\_date)`
-Busy staff	A staff member cannot call the next token while still serving one (409)
-One token per mobile	A mobile number cannot hold two active tokens in the same department
-Estimated wait	`people ahead × average service time ÷ active counters` (rounded up). Average = last 20 completed services, falling back to 5 min until 5 samples exist, never below 1 min.
-📡 API reference
-Base URL `http://localhost:8080` · JSON everywhere · errors are `{"error": "message"}` (400 / 401 / 403 / 404 / 409). Staff endpoints need `Authorization: Bearer <JWT>`.
+Admin	admin@smartoffice.com	Admin@123
+IT Staff	it.staff@smartoffice.com	Staff@123
+HR Staff	hr.staff@smartoffice.com	Staff@123
+Accounts Staff	accounts.staff@smartoffice.com	Staff@123
+Administration Staff	admin.staff@smartoffice.com	Staff@123
+
+
+These are demo credentials from the project configuration. Change them before real deployment.
+
+📡 Main API Groups
 Public
-Method	Path	Notes
-GET	`/api/health`	liveness
-POST	`/api/auth/login`	`{"email","password"}` → `{"token","user":{"id","name","role"}}`
-GET	`/api/departments`	status, `waiting`, `serving`, `currently\\\_serving\\\[]`, `estimated\\\_wait\\\_seconds`
-GET	`/api/departments/:id`	one department
-POST	`/api/visitors`	`{"name","mobile"}` (optional; token creation can take name + mobile directly)
-POST	`/api/tokens`	`{"department\\\_id":1,"name":"Sohan","mobile":"9876543210","priority":false}` → 201. 409 if paused or duplicate
-GET	`/api/tokens/:id`	token + live `queue\\\_position`, `people\\\_ahead`, `estimated\\\_wait\\\_seconds`
-PATCH	`/api/tokens/:id/cancel`	only while `WAITING`
-GET	`/api/tokens/:id/queue-position`	position, people ahead, estimate, `currently\\\_serving\\\[]`, anonymous `queue\\\[]`
-Staff / Admin (JWT)
-Method	Path	Notes
-GET	`/api/auth/me`	current user
-GET	`/api/dashboard`	totals, averages, per-department counts
-GET	`/api/queues/:departmentId`	`serving\\\[]`, `waiting\\\[]` (in call order), today's counts
-POST	`/api/queues/:departmentId/call-next`	404 if empty, 409 if you are still serving
-POST	`/api/tokens/:id/complete`	must be `SERVING`
-POST	`/api/tokens/:id/no-show`	must be `SERVING`
-POST	`/api/tokens/:id/transfer`	`{"department\\\_id":3,"reason":"optional"}`
-POST	`/api/tokens/:id/priority`	`{"priority":true,"level":1}` · `WAITING` only
-PATCH	`/api/departments/:id/pause` · `/resume`	
-Authorization: ADMIN may act on any department; STAFF only on their own (403 otherwise). Viewing queues and the dashboard is open to all staff.
-```bash
-TOKEN=$(curl -s localhost:8080/api/auth/login -H 'Content-Type: application/json' \\\\
-  -d '{"email":"it.staff@smartoffice.com","password":"Staff@123"}' | sed 's/.\\\*"token":"\\\\(\\\[^"]\\\*\\\\)".\\\*/\\\\1/')
-curl -s -X POST localhost:8080/api/queues/1/call-next -H "Authorization: Bearer $TOKEN"
-```
-🗂️ Project structure
-```
-smart-office-queue/
+GET    /api/health
+POST   /api/auth/login
+GET    /api/departments
+GET    /api/departments/:id
+POST   /api/visitors
+POST   /api/tokens
+GET    /api/tokens/:id
+PATCH  /api/tokens/:id/cancel
+GET    /api/tokens/:id/queue-position
+Staff / Admin
+GET    /api/auth/me
+GET    /api/dashboard
+GET    /api/queues/:departmentId
+POST   /api/queues/:departmentId/call-next
+POST   /api/tokens/:id/complete
+POST   /api/tokens/:id/no-show
+POST   /api/tokens/:id/transfer
+POST   /api/tokens/:id/priority
+PATCH  /api/departments/:id/pause
+PATCH  /api/departments/:id/resume
+📁 Project Structure
+smart-office-queue-token-management/
+│
 ├── README.md
-├── database/                  schema.sql · seed.sql · setup.bat · setup.sh · README.md
+├── docs/
+│   └── home-page.png
+│
+├── database/
+│   ├── schema.sql
+│   ├── seed.sql
+│   ├── setup.bat
+│   └── setup.sh
+│
 ├── backend/
-│   ├── cmd/server/            main.go (wiring, graceful shutdown)
-│   ├── cmd/hashpw/            bcrypt helper
-│   ├── cmd/smoketest/         end-to-end rule test against a running server
-│   ├── config/                env / .env loading
-│   ├── database/              postgres.go + migrations/001..010
-│   ├── models/  repositories/  services/  handlers/  middleware/  routes/  utils/
-│   └── go.mod
-├── frontend/
-│   ├── lib/
-│   │   ├── main.dart
-│   │   ├── config/ models/ services/ providers/ utils/ widgets/
-│   │   └── screens/           splash · settings · visitor/\\\* · staff/\\\*
-│   ├── test/
-│   ├── setup\\\_web.ps1 / .sh    (generates web/)
-│   └── pubspec.yaml
-└── docs/screenshots/
-```
-Database tables: `users`, `departments`, `visitors`, `tokens`, `token\\\_events`, `token\\\_transfers`, `queue\\\_settings`, `counters`, `token\\\_service\\\_sessions`, `daily\\\_queue\\\_stats` (see `database/README.md`).
-✅ Testing
-Backend rule test (run against a demo database: it empties the queues first):
-```bash
+│   ├── cmd/
+│   │   ├── server/
+│   │   ├── hashpw/
+│   │   └── smoketest/
+│   ├── config/
+│   ├── database/
+│   ├── models/
+│   ├── repositories/
+│   ├── services/
+│   ├── handlers/
+│   ├── middleware/
+│   ├── routes/
+│   └── utils/
+│
+└── frontend/
+    ├── lib/
+    │   ├── config/
+    │   ├── models/
+    │   ├── services/
+    │   ├── providers/
+    │   ├── utils/
+    │   ├── widgets/
+    │   └── screens/
+    ├── test/
+    └── pubspec.yaml
+🧪 Testing
+Backend smoke test:
 cd backend
-go run ./cmd/smoketest          # BASE\\\_URL=http://host:port to point elsewhere
-```
-50 checks covering every item of the checklist: all four departments, unique numbers, position / estimate updates, cancel rules, priority never interrupts, priority before normal, no-show #1 / #2, transfer + permissions, pause / resume, dashboard updates, and two staff pressing Call next at the same instant.
-Frontend: `cd frontend \\\&\\\& flutter test`
-Manual end-to-end: run backend + frontend, generate tokens as a visitor, sign in as staff in an incognito window, then call next / complete / no-show and watch the visitor screen update within ~5 s.
-🖼️ Screenshots
-Add your screenshots to `docs/screenshots/` and link them here, for example:
-```markdown
-!\\\[Home](docs/screenshots/home.png)
-!\\\[Staff queue](docs/screenshots/staff-queue.png)
-```
-📝 Design notes & limitations
-Visitors have no accounts, as specified. Anyone who knows a numeric token id can view or cancel it. For production, return a per-token secret on creation and require it on cancel.
-Live updates use REST polling (5 s). SSE / WebSocket would be a natural next step.
-A visitor's tokens are remembered in the browser (local storage) for the My Tokens page.
-Staff sessions are JWTs valid for `JWT\\\_TTL\\\_HOURS`; there is no refresh token or server-side revocation.
-Visitor priority requests are on by default (`queue\\\_settings.allow\\\_visitor\\\_priority`); set it to `false` per department to restrict priority to staff.
----
-<div align="center">Built with Go, PostgreSQL and Flutter.</div>
+go run ./cmd/smoketest
+Frontend tests:
+cd frontend
+flutter test
+The project includes testing for department queues, token generation, queue position, cancellation, priority, no-show handling, transfer, pause/resume, dashboard updates, permissions, and concurrent Call next operations.
+🎯 Project Objective
+The system is designed to reduce physical waiting lines and provide a structured digital queue for office departments while giving staff and administrators tools to manage tokens and services efficiently.
+<div align="center">
+
+Smart Office • Queue & Token Management
+Built with Flutter, Go and PostgreSQL.
+</div>
