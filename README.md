@@ -103,7 +103,7 @@ Manual database setup:
 ### Backend
 
     cd backend
-    copy .env.example .env
+    .env check the postgres passwoed
     go mod tidy
     go run ./cmd/server
 
